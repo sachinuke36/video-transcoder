@@ -1,135 +1,278 @@
-# 🎥 Distributed Video Processing Pipeline (Redis + BullMQ + FFmpeg)
 
-A production-grade backend system for **uploading, processing, and transcoding videos asynchronously**, with **real-time progress tracking**, **job chaining**, and **Redis-backed state**.
+# 🎬 Distributed Video Processing Pipeline (Docker Ready)
 
-This project demonstrates how real media platforms handle long-running, CPU-intensive video workloads without blocking APIs.
+This project is a **production-style distributed backend system** that processes uploaded videos asynchronously using **Redis**, **BullMQ**, **Node.js (TypeScript)**, **FFmpeg**, and **OpenAI Whisper (Python)**.
 
----
-
-## 🚀 Features
-
-- Real video upload (multipart)
-- Asynchronous background processing using **BullMQ**
-- **Redis** as the single source of truth
-- Real-time progress updates via **Redis Pub/Sub**
-- Multi-stage job pipeline (Upload → Transcode → Thumbnail)
-- **Real FFmpeg transcoding** (no simulation)
-- CPU-bound workers with controlled concurrency
-- One-command local orchestration
-- Fault-tolerant, restart-safe architecture
+It demonstrates how real-world platforms (like YouTube / Vimeo) handle **large uploads**, **CPU-heavy workloads**, **fault tolerance**, and **real-time progress tracking**.
 
 ---
 
-## 🧠 Architecture Overview
+## ✨ Key Features
 
-Client  
-→ API (Express)  
-→ Upload Queue (BullMQ)  
-→ Upload Worker  
-→ Transcode Queue  
-→ Transcode Worker (FFmpeg)  
-→ Thumbnail Queue  
-→ Thumbnail Worker  
-→ DONE  
-
----
-
-## 🧩 Tech Stack
-
-- Node.js + TypeScript  
-- Express  
-- BullMQ  
-- Redis  
-- FFmpeg  
-- Multer  
-- concurrently  
+- Asynchronous video processing using background workers
+- Real-time progress updates via Redis Pub/Sub
+- Automatic retries and failure recovery
+- Multi-stage pipeline:
+  - Upload
+  - Transcoding
+  - Thumbnail generation
+  - Subtitle generation
+- Docker-ready setup (Node + Python + Redis + FFmpeg)
 
 ---
 
-## 📦 Pipeline Stages
+## 🧠 Why This Project Exists
 
-### Upload
-- Accepts multipart upload
-- Streams file to disk
-- Tracks byte-level progress
+Uploading and processing videos is **slow and expensive**.  
+Doing it inside a single HTTP request would:
 
-### Transcoding
-- Converts uploaded video to **360p `.mov`**
-- Parses FFmpeg stderr for real progress
-- CPU-bound worker
+- Block the server
+- Crash on large files
+- Lose progress on restart
 
-### Thumbnail
-- Final stage
-- Marks job as complete
+This project solves that by:
+- Offloading work to **background jobs**
+- Persisting state in **Redis**
+- Allowing workers to crash and recover safely
 
 ---
 
-## 📊 Progress Tracking
+## 🏗️ High-Level Architecture
 
-### Redis Pub/Sub
+```
+Client
+  |
+  | POST /videos
+  v
+API Server (Express)
+  |
+  | enqueue job
+  v
+Redis (BullMQ)
+  |
+  +--> Upload Worker
+        |
+        +--> Transcode Worker (FFmpeg)
+              |
+              +--> Thumbnail Worker
+                    |
+                    +--> Subtitle Worker (Whisper)
+```
+
+---
+
+## 🔄 Processing Pipeline (Step-by-Step)
+
+### 1️⃣ Upload Stage
+- Client uploads video using `multipart/form-data`
+- File saved to disk using Multer
+- Upload job is added to BullMQ
+- Progress is streamed in real time
+
+**Stage:** `UPLOADING`
+
+---
+
+### 2️⃣ Transcoding Stage
+- Video is converted to **360p `.mov`**
+- Uses FFmpeg
+- FFmpeg logs are parsed to calculate progress
+
+**Stage:** `TRANSCODING`
+
+---
+
+### 3️⃣ Thumbnail Generation
+- 3 thumbnails generated at:
+  - 10%
+  - 50%
+  - 90% of video duration
+- Stored on disk
+
+**Stage:** `THUMBNAIL`
+
+---
+
+### 4️⃣ Subtitle Generation
+- Subtitles generated using **OpenAI Whisper**
+- Executed via Python worker
+- Outputs `.srt` file
+
+**Stage:** `SUBTITLES`
+
+> ⚠️ Subtitle embedding into video is NOT implemented yet.
+
+---
+
+### 5️⃣ Completion
+- Final state stored in Redis
+- Job marked as done
+
+**Stage:** `DONE`
+
+---
+
+## ⚙️ Why Redis?
+
+Redis acts as the **central brain** of the system.
+
+Used for:
+- Job queues (BullMQ backend)
+- Persisting job state & progress
+- Pub/Sub for real-time updates
+- Crash recovery
+
+Without Redis:
+- Progress would reset on restart
+- Failed jobs would be lost
+- Scaling workers would be impossible
+
+---
+
+## 🔁 Why BullMQ?
+
+BullMQ handles:
+- Background jobs
+- Worker coordination
+- Retries with exponential backoff
+- Crash detection
+- Concurrency limits
+
+If a worker crashes at 30% → BullMQ retries the job.
+
+---
+
+## 📡 Real-Time Progress Updates
+
+- Progress stored using `HSET` in Redis
+- Events published via Redis `PUBLISH`
+- Listener subscribes using `PSUBSCRIBE`
+
+Example event:
 ```json
-{ "stage": "TRANSCODING", "progress": 55 }
-```
-
-### Status API
-```
-GET /videos/:videoId/status
-```
-
----
-
-## 🖥️ Running the Project
-
-### Prerequisites
-- Node.js ≥ 18
-- Redis running locally
-- FFmpeg installed
-
-```bash
-brew install ffmpeg
-```
-
-### Install
-```bash
-npm install
-```
-
-### Run everything
-```bash
-npm run dev:all
+{
+  "stage": "TRANSCODING",
+  "progress": 70
+}
 ```
 
 ---
 
-## 📁 Output
+## 🧰 Tech Stack
+
+**Backend**
+- Node.js
+- TypeScript
+- Express
+
+**Queue & State**
+- Redis
+- BullMQ
+
+**Media**
+- FFmpeg
+- OpenAI Whisper
+
+**Infra**
+- Docker
+- Docker Compose
+
+---
+
+## 📂 Project Structure
 
 ```
+src/
+ ├── api/
+ │   ├── routes/
+ │   └── middleware/
+ ├── workers/
+ │   ├── upload.worker.ts
+ │   ├── transcode.worker.ts
+ │   ├── thumbnail.worker.ts
+ │   └── subtitle.worker.ts
+ ├── queues/
+ ├── redis/
+ ├── scripts/
+ └── utils/
+
+uploads/
 processed/
- └── <videoId>-360p.mov
+thumbnails/
+storage/
 ```
 
 ---
 
-## 🎯 Why This Project Matters
+## 🐳 Docker Usage
 
-This project demonstrates:
-- Distributed systems design
-- Async job orchestration
-- CPU-bound background processing
-- Event-driven architecture
-- Real media pipelines
+Everything runs with one command:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+- Redis
+- API server
+- All workers
+- Python + Whisper
+- FFmpeg
+
+No local setup required.
+
+---
+
+## 🔐 Environment Variables
+
+Handled automatically in Docker.
+
+```env
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+---
+
+## 🚧 Known Limitations
+
+- Subtitle embedding not implemented
+- No resumable uploads
+- Single resolution output
+- CPU-only processing
 
 ---
 
 ## 🔮 Future Improvements
 
-- Multiple resolutions
-- Real thumbnail extraction
-- Retry & DLQ handling
-- Bull Board dashboard
-- Docker Compose
-- HLS streaming
+- Embed subtitles into video
+- Multiple resolutions (240p, 720p, 1080p)
+- Cloud storage (S3 / GCS)
+- Frontend dashboard
+- Kubernetes deployment
 
 ---
 
-Built with ❤️ using Redis & BullMQ
+## ✅ Why This Project Matters
+
+This is **not a toy project**.
+
+It demonstrates:
+- Distributed system design
+- Async job processing
+- Crash recovery
+- Cross-language workers (Node + Python)
+- Real-world backend patterns
+
+---
+
+## 🏁 Final Note
+
+This project mirrors **real production pipelines** used in video platforms.
+
+You now have:
+- A scalable architecture
+- Fault-tolerant processing
+- Real-time observability
+
+🚀 Ready for GitHub.

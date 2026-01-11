@@ -1,7 +1,10 @@
 import IORedis from "ioredis";
 
+const redisHost = process.env.REDIS_HOST || "127.0.0.1";
+const redisPort = Number(process.env.REDIS_PORT) || 6379;
+
 export const redisClient = new IORedis({
-    host: "127.0.0.1",
-    port: 6379,
+    host: redisHost,
+    port: redisPort,
     maxRetriesPerRequest: null,
 });

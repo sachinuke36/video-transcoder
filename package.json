@@ -8,8 +8,11 @@
     "transcode-worker": "ts-node src/workers/transcode.worker.ts",
     "thumbnail-worker": "ts-node src/workers/thumbnail.worker.ts",
     "listener": "ts-node src/scripts/listen.ts",
+    "subtitle-worker": "ts-node src/workers/subtitle.worker.ts",
 
-    "dev:all": "concurrently -k -n API,UPLOAD,TRANSCODE,THUMBNAIL,LISTENER -c blue,green,magenta,yellow,cyan \"npm run api\" \"npm run upload-worker\" \"npm run transcode-worker\" \"npm run thumbnail-worker\" \"npm run listener\""
+    
+
+    "dev:all": "concurrently -k -n API,UPLOAD,TRANSCODE,THUMBNAIL,SUBTITLE,LISTENER -c blue,green,magenta,yellow,cyan \"npm run api\" \"npm run upload-worker\" \"npm run transcode-worker\" \"npm run thumbnail-worker\" \"npm run subtitle-worker\" \"npm run listener\""
   },
   "keywords": [],
   "author": "",

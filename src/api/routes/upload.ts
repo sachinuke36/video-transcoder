@@ -13,7 +13,7 @@ router.post('/',uploadMiddleware.single('video') ,async (req: Request, res: Resp
     const videoId = uuid();
 
     await uploadQueue.add(
-        "upload-video",
+        "video-upload",
         {
             videoId,
             filePath: req.file.path,
