@@ -255,7 +255,6 @@ REDIS_PORT=6379
 
 ## ✅ Why This Project Matters
 
-This is **not a toy project**.
 
 It demonstrates:
 - Distributed system design
@@ -270,9 +269,4 @@ It demonstrates:
 
 This project mirrors **real production pipelines** used in video platforms.
 
-You now have:
-- A scalable architecture
-- Fault-tolerant processing
-- Real-time observability
 
-🚀 Ready for GitHub.
